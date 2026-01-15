@@ -571,10 +571,6 @@ class StockAnalysisPipeline:
             # 生成决策仪表盘格式的详细日报
             report = self.notifier.generate_dashboard_report(results)
             
-            # 保存到本地
-            filepath = self.notifier.save_report_to_file(report)
-            logger.info(f"决策仪表盘日报已保存: {filepath}")
-            
             # 推送通知
             if self.notifier.is_available():
                 # 生成精简版决策仪表盘用于推送
@@ -608,6 +604,7 @@ def parse_arguments() -> argparse.Namespace:
   python main.py --no-notify        # 不发送推送通知
   python main.py --schedule         # 启用定时任务模式
   python main.py --market-review    # 仅运行大盘复盘
+  python main.py --save-local ./reports  # 保存报告到指定目录
         '''
     )
     
@@ -658,6 +655,16 @@ def parse_arguments() -> argparse.Namespace:
         '--no-market-review',
         action='store_true',
         help='跳过大盘复盘分析'
+    )
+    
+    parser.add_argument(
+        '--save-local',
+        type=str,
+        nargs='?',
+        const='./reports',
+        default=None,
+        metavar='DIR',
+        help='保存报告到本地目录 (默认: ./reports)，支持 Markdown 格式'
     )
     
     return parser.parse_args()
@@ -742,6 +749,38 @@ def run_full_analysis(
             # 如果有结果，赋值给 market_report 用于后续飞书文档生成
             if review_result:
                 market_report = review_result
+        
+        # 3. 保存到本地（默认保存到 ./reports 目录，--save-local 可指定其他目录）
+        save_path = args.save_local if args.save_local else './reports'
+        if results or market_report:
+            save_dir = Path(save_path)
+            save_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 生成文件名
+            tz_cn = timezone(timedelta(hours=8))
+            now = datetime.now(tz_cn)
+            filename = f"stock_report_{now.strftime('%Y%m%d_%H%M%S')}.md"
+            filepath = save_dir / filename
+            
+            # 准备完整内容
+            full_content = f"# 📊 A股智能分析报告\n\n"
+            full_content += f"> 生成时间: {now.strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+            full_content += "---\n\n"
+            
+            # 添加大盘复盘内容（如果有）
+            if market_report:
+                full_content += f"## 📈 大盘复盘\n\n{market_report}\n\n---\n\n"
+            
+            # 添加个股决策仪表盘（如果有）
+            if results:
+                dashboard_content = pipeline.notifier.generate_dashboard_report(results)
+                full_content += f"## 🚀 个股决策仪表盘\n\n{dashboard_content}\n"
+            
+            # 写入文件
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(full_content)
+            
+            logger.info(f"✅ 报告已保存到本地: {filepath}")
         
         # 输出摘要
         if results:

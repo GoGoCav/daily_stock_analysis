@@ -124,10 +124,25 @@ cp .env.example .env
 vim .env  # 填入你的 API Key
 
 # 运行
-python main.py                    # 完整分析
-python main.py --market-review    # 仅大盘复盘
-python main.py --schedule         # 定时任务模式
+python main.py                          # 使用 .env 中的 STOCK_LIST 进行完整分析
+python main.py --stocks 603667,300456   # 指定一只或多只股票（覆盖 .env）
+python main.py --save-local ./my_dir    # 分析并保存报告到指定目录
+python main.py --no-market-review       # 跳过大盘复盘
+python main.py --no-notify              # 仅分析不发送通知
+python main.py --schedule               # 定时任务模式
 ```
+
+### 💡 进阶参数说明
+
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `--stocks` | 指定股票代码（多个用逗号分隔），覆盖 `.env` | `--stocks 603667,300456` |
+| `--save-local` | 指定报告保存目录（默认自动保存至 `./reports`） | `--save-local ./reports` |
+| `--no-market-review` | 跳过大盘复盘流程 | `--no-market-review` |
+| `--no-notify` | 仅执行分析并保存本地报告，不发送通知 | `--no-notify` |
+| `--days` | 获取历史数据的天数（默认 45 天） | `--days 60` |
+| `--dry-run` | 模拟运行，不实际调用 AI 分析 | `--dry-run` |
+
 
 ### 方式三：Docker 部署
 
